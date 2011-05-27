@@ -63,6 +63,7 @@ header('Content-Type: text/html; charset=UTF-8');
 <body>
 <script type="text/javascript" src="/js/wz_tooltip.js"></script>
 <script type="text/javascript" src="/js/tip_balloon.js"></script>
+<script type="text/javascript" src="/js/usableforms.js"></script>
 
 <div class="container">
 

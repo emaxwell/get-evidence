@@ -52,7 +52,7 @@ if (strlen($display_genome_ID) > 0) {
 	$page_content .= upload_warning();
         $page_content .= "<p><A HREF=\"guide_upload_and_source_file_formats\">"
                 . "Upload file form guide</A></p>";
-        $page_content .= genome_entry_form();
+        $page_content .= genome_entry_form($user["oid"]);
     } else {
         $page_content .= "<P>If you log in with your OpenID, you can process "
 		    . "your own data by uploading it here.</P>";
@@ -174,7 +174,34 @@ EOT
 ;
 }
 
-function genome_entry_form() {
+function list_genome_options($user_oid, $rel_id) {
+    global $pgp_data_user, $public_data_user, $user;
+    if ($user_oid != $pgp_data_user &&
+	$user_oid != $public_data_user &&
+	getCurrentUser('is_admin')) {
+	$condition = 'oid NOT IN (?,?)';
+	$param = array ($pgp_data_user, $public_data_user);
+    } else {
+	$condition = 'oid=?';
+	$param = array ($user_oid);
+    }
+    $returned_text = "<option rel=\"none\" value=\"none\">None</option>\n";
+    $returned_text .= "<option rel=\"" . $rel_id . "\" value=\"new\">Upload new genome...</option>\n";
+    $db_query = theDb()->getAll ("SELECT * FROM private_genomes WHERE $condition ORDER BY private_genome_id", $param);
+    if ($db_query) {
+        foreach ($db_query as $result) {
+            $returned_text .= "<option rel=\"none\" value=\"" . $result['nickname'] . "\">" . $result['nickname'] . "</option>\n";
+        }
+    }
+    return $returned_text; 
+}
+
+function genome_entry_form($user_oid) {
+    $rel1 = "upload_parA";
+    $rel2 = "upload_parB";
+    $parent_options1 = list_genome_options($user_oid,$rel1);
+    $parent_options2 = list_genome_options($user_oid,$rel2);
+    
     return '
 <div> 
 <form enctype="multipart/form-data" action="/genome_upload.php" method="post"
@@ -188,11 +215,68 @@ function genome_entry_form() {
 <input type="text" size="64" name="location" id="path" /></label></td> 
 </tr><tr> 
 <td colspan="10"><label class="label">Genome name<br> 
-<input type="text" size="64" name="nickname" id="nickname"></label> 
+<input type="text" size="64" name="nickname" id="nickname">
 <input type="submit" value="Upload" class="button" /></td> 
-</tr></table> 
+</tr><tr>
+<td colspan=12>
+<input type="radio" name="trio" value="none" rel="none" CHECKED/>
+This genome is <strong>not</strong> part of a genome trio.
+<br />
+<input type="radio" name="trio" value="child" rel="trioform" id="trioform"/>
+This genome is the <strong>child</strong> of a genome trio.
+</tr></table>
+
+<div rel="trioform">
+<table cellspacing=0 cellpadding=0><tr>
+<td>Select parent genome(s):</td>
+<td><font color="red">&nbsp;*&nbsp;</font></td>
+<td>
+<select name="parent_a">' .
+$parent_options1 .
+'</select></td>
+</tr><tr>
+<td>&nbsp;</td>
+<td>&nbsp;&nbsp;&nbsp;</td>
+<td>
+<select name="parent_b">' .
+$parent_options2 .
+'</select></td>
+</tr><tr><td></td><td></td>
+<td><font color="red"><small>(* indicates required field)</small></font></td>
+</tr></table>
+</div>
+
+<div rel="' . $rel1 .'">
+<table><tr><h3>Upload genome for first parent</h3></tr><tr> 
+<td><label class="label">Filename<br> 
+<input type="file" class="file" name="genotype_parA" id="genotype_parA" /></label></td> 
+<td>OR</td>
+	<td><label class="label">File location on server (use file:/// syntax)<br> 
+<input type="text" size="64" name="location_parA" id="path_parA" /></label></td> 
+</tr><tr> 
+<td colspan="10"><label class="label">Genome name<br> 
+<input type="text" size="64" name="nickname_parA" id="nickname_parA">
+</tr>
+</table>
+<br/><br/>
+</div>
+
+<div rel="' . $rel2 .'">
+<table><tr><h3>Upload genome for second parent</h3></tr><tr> 
+<td><label class="label">Filename<br> 
+<input type="file" class="file" name="genotype_parB" id="genotype_parB" /></label></td> 
+<td>OR</td>
+	<td><label class="label">File location on server (use file:/// syntax)<br> 
+<input type="text" size="64" name="location_parB" id="path_parB" /></label></td> 
+</tr><tr> 
+<td colspan="10"><label class="label">Genome name<br> 
+<input type="text" size="64" name="nickname_parB" id="nickname_parB">
+</td></tr>
+</table>
+</div>
 </form> 
 </div>
+
 <p>&nbsp;</p>';
 }
 
