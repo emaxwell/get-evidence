@@ -79,10 +79,10 @@ if (isset($_POST['reprocess_genome_id'])) {
                     $page_content .= "Error: First parent file too large! Size limit is 500MB.";
                 }
                 elseif ((!empty($_FILES["genotype_parA"])) && ($_FILES['genotype_parA']['error'] == 0)) {
-                    $shasumA = genotype_file_upload($_FILES["genotype_parA"], $page_content, $_POST['nickname_parA']);
+                    $shasumA = genotype_file_upload($_FILES["genotype_parA"], $user, $page_content, $_POST['nickname_parA']);
                 }
                 elseif (isset($_POST['location_parA']) && $user && $user['oid']) {
-                    $shasumA = location_upload($_POST['location_parA'], $page_content, $_POST['nickname_parA']);
+                    $shasumA = location_upload($_POST['location_parA'], $user, $page_content, $_POST['nickname_parA']);
                 }
                 else {
                     $page_content .= "Error: No file uploaded or file size exceeds limit.";
@@ -109,10 +109,10 @@ if (isset($_POST['reprocess_genome_id'])) {
                     $page_content .= "Error: First parent file too large! Size limit is 500MB.";
                 }
                 elseif ((!empty($_FILES["genotype_parB"])) && ($_FILES['genotype_parB']['error'] == 0)) {
-                    $shasumB = genotype_file_upload($_FILES["genotype_parB"], $page_content, $_POST['nickname_parB']);
+                    $shasumB = genotype_file_upload($_FILES["genotype_parB"], $user, $page_content, $_POST['nickname_parB']);
                 }
                 elseif (isset($_POST['location_parB']) && $user && $user['oid']) {
-                    $shasumB = location_upload($_POST['location_parB'], $page_content, $_POST['nickname_parB']);
+                    $shasumB = location_upload($_POST['location_parB'], $user, $page_content, $_POST['nickname_parB']);
                 }
                 else {
                     $page_content .= "Error: No file uploaded or file size exceeds limit.";
@@ -145,10 +145,10 @@ if (isset($_POST['reprocess_genome_id'])) {
         $page_content .= "Error: Genome file too large! Size limit is 500MB.";
     }
     elseif ((!empty($_FILES["genotype"])) && ($_FILES['genotype']['error'] == 0)) {
-        $shasum = genotype_file_upload($_FILES["genotype"], $page_content, $_POST['nickname'], $json_data);
+        $shasum = genotype_file_upload($_FILES["genotype"], $user, $page_content, $_POST['nickname'], $json_data);
     }
     elseif (isset($_POST['location']) && $user && $user['oid']) {
-        $shasum = location_upload($_POST['location'], $page_content, $_POST['nickname'], $json_data);
+        $shasum = location_upload($_POST['location'], $user, $page_content, $_POST['nickname'], $json_data);
     }
     else {
         $page_content .= "Error: No file uploaded or file size exceeds limit.";
@@ -161,7 +161,7 @@ if (isset($_POST['reprocess_genome_id'])) {
     $page_content .= "Error: No file uploaded or file size exceeds limit";
 }
 
-function genotype_file_upload($genotype_file, &$page_content, $nick, $json = None) {
+function genotype_file_upload($genotype_file, $user, &$page_content, $nick, $json = NULL) {
     $filename = basename($genotype_file['name']);
     $ext = substr($filename, strrpos($filename, '.') + 1);
     if (($ext == "txt" || $ext == "gff" || $ext == "gz" || $ext == "bz2") && ($genotype_file["size"] < 524288000)) {
@@ -182,10 +182,10 @@ function genotype_file_upload($genotype_file, &$page_content, $nick, $json = Non
 	    else
 	        @mkdir ($GLOBALS["gBackendBaseDir"] . "/upload/$shasum");
 
-        if ($json) { // trio metadata exists
+        if (!is_null($json)) { // trio metadata exists
             // Add parent metadata in child directory
             $metafile = $GLOBALS["gBackendBaseDir"] . "/upload/$shasum/metadata.json";
-            if ($file_exists($metafile)) {
+            if (file_exists($metafile)) {
                 $file_contents = file_get_contents($metafile, false);
                 $json_array = json_decode($file_contents, true);
                 foreach ($json_array as $key => $val) {
@@ -200,7 +200,7 @@ function genotype_file_upload($genotype_file, &$page_content, $nick, $json = Non
             if (array_key_exists('parent A', $json)) {
                 $shasumA = $json['parent A'];
                 $metafile = $GLOBALS["gBackendBaseDir"] . "/upload/$shasumA/metadata.json";
-                if ($file_exists($metafile)) {
+                if (file_exists($metafile)) {
                     $file_contents = file_get_contents($metafile, false);
                     $json_array = json_decode($file_contents, true);
                     if (array_key_exists('children', $json_array)) {
@@ -220,7 +220,7 @@ function genotype_file_upload($genotype_file, &$page_content, $nick, $json = Non
             if (array_key_exists('parent B', $json)) {
                 $shasumB = $json['parent B'];
                 $metafile = $GLOBALS["gBackendBaseDir"] . "/upload/$shasumB/metadata.json";
-                if ($file_exists($metafile)) {
+                if (file_exists($metafile)) {
                     $file_contents = file_get_contents($metafile, false);
                     $json_array = json_decode($file_contents, true);
                     if (array_key_exists('children', $json_array)) {
@@ -256,7 +256,7 @@ function genotype_file_upload($genotype_file, &$page_content, $nick, $json = Non
     return false;
 }
 
-function location_upload($location, &$page_content, $nick, $json = None) {
+function location_upload($location, $user, &$page_content, $nick, $json = NULL) {
   $location = preg_replace('{/\.\./}','',$location); # No shenanigans
   if (preg_match('{^file:///}',$location)) {
     $location = preg_replace('{^file://}','',$location);
@@ -270,10 +270,10 @@ function location_upload($location, &$page_content, $nick, $json = None) {
       // Attempt to move the uploaded file to its new place
       @mkdir ($GLOBALS["gBackendBaseDir"] . "/upload/$shasum");
 
-        if ($json) { // trio metadata exists
+        if (!is_null($json)) { // trio metadata exists
             // Add parent metadata in child directory
             $metafile = $GLOBALS["gBackendBaseDir"] . "/upload/$shasum/metadata.json";
-            if ($file_exists($metafile)) {
+            if (file_exists($metafile)) {
                 $file_contents = file_get_contents($metafile, false);
                 $json_array = json_decode($file_contents, true);
                 foreach ($json_array as $key => $val) {
@@ -288,19 +288,17 @@ function location_upload($location, &$page_content, $nick, $json = None) {
             if (array_key_exists('parent A', $json)) {
                 $shasumA = $json['parent A'];
                 $metafile = $GLOBALS["gBackendBaseDir"] . "/upload/$shasumA/metadata.json";
-                if ($file_exists($metafile)) {
+                $jsonA = array();
+                if (file_exists($metafile)) {
                     $file_contents = file_get_contents($metafile, false);
-                    $json_array = json_decode($file_contents, true);
-                    if (array_key_exists('children', $json_array)) {
-                        array_push($json_array['children'], $shasum);
-                    }
-                    else {
-                        $json_array['children'] = array();
-                        array_push($json_array['children'], $shasum);
-                    }
+                    $jsonA = json_decode($file_contents, true);
                 }
+                if (!array_key_exists('children', $jsonA)) {
+                    $jsonA['children'] = array();
+                }
+                array_push($jsonA['children'], $shasum);
                 $handle = fopen($metafile, 'w');
-                fwrite($handle, json_encode($json));
+                fwrite($handle, json_encode($jsonA));
                 fclose($handle);
             }
 
@@ -308,19 +306,17 @@ function location_upload($location, &$page_content, $nick, $json = None) {
             if (array_key_exists('parent B', $json)) {
                 $shasumB = $json['parent B'];
                 $metafile = $GLOBALS["gBackendBaseDir"] . "/upload/$shasumB/metadata.json";
-                if ($file_exists($metafile)) {
+                $jsonB = array();
+                if (file_exists($metafile)) {
                     $file_contents = file_get_contents($metafile, false);
-                    $json_array = json_decode($file_contents, true);
-                    if (array_key_exists('children', $json_array)) {
-                        array_push($json_array['children'], $shasum);
-                    }
-                    else {
-                        $json_array['children'] = array();
-                        array_push($json_array['children'], $shasum);
-                    }
+                    $jsonB = json_decode($file_contents, true);
                 }
+                if (!array_key_exists('children', $jsonB)) {
+                    $jsonB['children'] = array();
+                }
+                array_push($jsonB['children'], $shasum);
                 $handle = fopen($metafile, 'w');
-                fwrite($handle, json_encode($json));
+                fwrite($handle, json_encode($jsonB));
                 fclose($handle);
             }
         }
